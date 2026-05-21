@@ -25,6 +25,7 @@ from .extractors import HeuristicExtractor, LLMExtractor
 from .service import LanceKnowledgeGraph, create_default_service
 from .store import LanceGraphStore
 from .webservice import create_app
+from lance_graph import VectorSearch, DistanceMetric
 
 TableMapping = Mapping[str, pa.Table]
 
@@ -65,6 +66,23 @@ class KnowledgeGraph:
                 {name: _ensure_table(name, table) for name, table in datasets.items()}
             )
         return query.execute(sources)
+
+    def run_with_vector_rerank(
+        self,
+        statement: str,
+        vector_search: "VectorSearch",
+        *,
+        datasets: Optional[TableMapping] = None,
+    ) -> pa.Table:
+        """Execute a Cypher statement and rerank results by vector similarity."""
+
+        query = CypherQuery(statement).with_config(self.config)
+        sources: Dict[str, pa.Table] = dict(self._tables)
+        if datasets:
+            sources.update(
+                {name: _ensure_table(name, table) for name, table in datasets.items()}
+            )
+        return query.execute_with_vector_rerank(sources, vector_search)
 
     def tables(self) -> Dict[str, pa.Table]:
         """Return a shallow copy of the registered datasets."""
@@ -129,4 +147,6 @@ __all__ = [
     "preview_extraction",
     "HeuristicExtractor",
     "LLMExtractor",
+    "VectorSearch",
+    "DistanceMetric",
 ]
